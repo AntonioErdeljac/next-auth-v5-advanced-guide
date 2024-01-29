@@ -20,9 +20,9 @@ export const Header = ({
         "text-3xl font-semibold",
         font.className,
       )}>
-        🔐 Auth
+        .JUGGLE.
       </h1>
-      <p className="text-muted-foreground text-sm">
+      <p className=" text-sm">
         {label}
       </p>
     </div>

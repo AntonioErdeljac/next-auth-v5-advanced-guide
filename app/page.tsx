@@ -1,35 +1,28 @@
-import { Poppins } from "next/font/google";
-
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { LoginButton } from "@/components/auth/login-button";
-
-const font = Poppins({
-  subsets: ["latin"],
-  weight: ["600"]
-})
+import Image from "next/image";
 
 export default function Home() {
+  const array = new Array(19).fill(0);
   return (
-    <main className="flex h-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-400 to-blue-800">
-      <div className="space-y-6 text-center">
-        <h1 className={cn(
-          "text-6xl font-semibold text-white drop-shadow-md",
-          font.className,
-        )}>
-          🔐 Auth
-        </h1>
-        <p className="text-white text-lg">
-          A simple authentication service
-        </p>
-        <div>
-          <LoginButton  asChild>
-            <Button variant="secondary" size="lg">
-              Sign in
-            </Button>
-          </LoginButton>
-        </div>
-      </div>
+    <main className="h-screen flex-col gap-10 snap-y snap-mandatory overflow-y-auto ">
+      {array.map((slide, index) => {
+        return (
+          <div
+            key={`slide-${index}`}
+            className=" snap-center shrink-0 w-full  py-3 lg:px-20 flex justify-center items-center   "
+          >
+            <div
+              className={`w-full   flex justify-center items-center group-hover:p-3 rounded-md overflow-hidden place-items-center `}
+            >
+              <Image
+                src={`/presentation/Juggle-Presentation${index + 1}.jpg`}
+                height={2000}
+                width={2000}
+                alt="image"
+              />
+            </div>
+          </div>
+        );
+      })}
     </main>
-  )
+  );
 }

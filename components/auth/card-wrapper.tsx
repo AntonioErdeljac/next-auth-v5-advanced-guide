@@ -1,6 +1,6 @@
 "use client";
 
-import { 
+import {
   Card,
   CardContent,
   CardFooter,
@@ -26,7 +26,7 @@ export const CardWrapper = ({
   showSocial
 }: CardWrapperProps) => {
   return (
-    <Card className="w-[400px] shadow-md">
+    <Card className="w-[400px] shadow-md bg-incredible text-background">
       <CardHeader>
         <Header label={headerLabel} />
       </CardHeader>

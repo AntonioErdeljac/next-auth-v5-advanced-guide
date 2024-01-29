@@ -1,13 +1,216 @@
 // prisma/schema.prisma
-datasource db {
-  provider  = "postgresql"
-  url  	    = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum Priority {
+  URGENT
+  HIGH
+  NORMAL
+  LOW
+}
+
+enum TaskStatus {
+  TO_DO
+  WORKING
+  NEEDS_REVIEW
+  REVIEWED
+  ON_HOLD
+  CLOSED
+  DROPPED
+}
+
+enum ArtistLevel {
+  JUNIOR
+  MID
+  SENIOR
+}
+
+model Department {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  projectId       String @db.ObjectId
+  percentToSave   Int    @default(0)
+  rateToClient    Int    @default(0)
+  maxTime         Int    @default(0)
+  maxBusinessDays Int    @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Difficulty {
+  LOW
+  NORMAL
+  HARD
+  VERY_HARD
+}
+
+enum TaskStage {
+  REFERENCE
+  BLOCKING
+  SPLINING
+  POLISHING
+}
+
+model Task {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  title       String //MANDATORY
+  imageUrl    String?
+  description String?
+  shotFrames  Int     @default(0)
+
+  departmentId String?     @db.ObjectId
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  status               TaskStatus @default(TO_DO)
+  priority             Priority   @default(NORMAL)
+  feedbackUrl          String?
+  estimatedHours       Int        @default(0)
+  clientEstimatedHours Boolean    @default(false)
+  difficulty           Difficulty @default(NORMAL)
+  stage                TaskStage  @default(REFERENCE)
+  dueDate              DateTime?
+  closedDate           DateTime?
+
+  couldAssign String?
+  assignedTo  String[]    @db.ObjectId
+  level       ArtistLevel @default(JUNIOR)
+  user        User?       @relation(fields: [assignedTo], references: [id], onDelete: Cascade)
+
+  child        TaskChild[]
+  parent       TaskParent[]
+  hoursEntries HourEntry[]
+
+  projectId String  @db.ObjectId // MANDATORY
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SubmittedWeek {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  week Int
+
+  projectId String  @db.ObjectId
+  project   Project @relation(fields: [projectId], references: [id])
+  userId    String  @db.ObjectId
+  user      User    @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model HourEntry {
+  id    String   @id @default(auto()) @map("_id") @db.ObjectId
+  hours Float
+  date  DateTime
+
+  taskId    String  @db.ObjectId
+  task      Task    @relation(fields: [taskId], references: [id])
+  projectId String  @db.ObjectId
+  project   Project @relation(fields: [projectId], references: [id])
+  userId    String  @db.ObjectId
+  user      User    @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskChild {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  taskId String @db.ObjectId
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskParent {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  taskId String @db.ObjectId
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MemberRole {
+  ADMIN
+  MODERATOR
+  PROJECT_MANAGER
+  MEMBER
+  CLIENT
+}
+
+model Member {
+  id   String     @id @default(auto()) @map("_id") @db.ObjectId
+  role MemberRole @default(MEMBER)
+
+  name      String?
+  email     String?
+  startDate DateTime?
+  endDate   DateTime?
+  level     ArtistLevel @default(MID)
+  rate      Int         @default(0)
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String  @db.ObjectId
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Project {
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  title        String  @unique
+  description  String?
+  projectImage String?
+  status       Status  @default(OPEN)
+  inviteCode   String  @unique
+  list         Boolean @default(true)
+
+  members          Member[]
+  tasks            Task[]
+  departments      Department[]
+  hoursEntries     HourEntry[]
+  blockHourEntries Boolean      @default(true)
+  // teamEmails   String[]
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // user User[]   @relation(fields: [team], references: [id])
+
+  // @@index([userId])
+  SubmittedWeeks SubmittedWeek[]
+}
+
+// auth
 
 enum UserRole {
   ADMIN
@@ -15,31 +218,36 @@ enum UserRole {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          UserRole @default(USER)
-  accounts      Account[]
-  isTwoFactorEnabled Boolean @default(false)
+  id                    String                 @id @default(auto()) @map("_id") @db.ObjectId
+  name                  String?
+  email                 String?                @unique
+  emailVerified         DateTime?
+  image                 String?
+  password              String?
+  role                  UserRole               @default(USER)
+  accounts              Account[]
+  isTwoFactorEnabled    Boolean                @default(false)
   twoFactorConfirmation TwoFactorConfirmation?
+  Task                  Task[]
+  SubmittedWeek         SubmittedWeek[]
+  HourEntry             HourEntry[]
+  Member                Member[]
+  Project               Project[]
 }
 
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_state      String?
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -47,37 +255,37 @@ model Account {
 }
 
 model VerificationToken {
-  id String @id @default(cuid())
-  email String
-  token String @unique
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  email   String
+  token   String   @unique
   expires DateTime
 
   @@unique([email, token])
 }
 
 model PasswordResetToken {
-  id String @id @default(cuid())
-  email String
-  token String @unique
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  email   String
+  token   String   @unique
   expires DateTime
 
   @@unique([email, token])
 }
 
 model TwoFactorToken {
-  id String @id @default(cuid())
-  email String
-  token String @unique
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  email   String
+  token   String   @unique
   expires DateTime
 
   @@unique([email, token])
 }
 
 model TwoFactorConfirmation {
-  id String @id @default(cuid())
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId])
 }
